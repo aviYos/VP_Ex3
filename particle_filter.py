@@ -82,24 +82,22 @@ def slice_image(image: np.ndarray, state: np.ndarray) -> np.ndarray:
     return image[y_center - half_height: y_center + half_height, x_center - half_width: x_center + half_width]
 
 
-def create_slice_mask(image: np.ndarray, state: np.ndarray) -> np.ndarray:
-    x_center, y_center, half_width, half_height, _, _ = state
-    mask = np.zeros(image.shape[:2], np.uint8)
-    mask[y_center - half_height: y_center + half_height, x_center - half_width: x_center + half_width] = 255
-    masked_img = cv2.bitwise_and(image, image, mask=mask)
-    return masked_img
+def calc_histogram(image: np.ndarray, number_of_bins: int) -> np.ndarray:
+    histogram = np.zeros((number_of_bins, number_of_bins, number_of_bins))
+    red_channel, green_channel, blue_channel = cv2.split(image)
+    h, w = red_channel.shape
+
+    for height in range(h):
+        for width in range(w):
+            histogram[red_channel[height, width], green_channel[height, width], blue_channel[height, width]] += 1
+
+    return histogram
 
 
 def create_quantizied_histogram(image: np.ndarray) -> np.ndarray:
     number_of_bins = int(np.power(2, NUMBER_OF_HISTOGRAM_BITS))
-    quantizied_image = np.uint8(np.floor(np.divide(image, number_of_bins)))
-    hist_size = number_of_bins
-    hist_range = [0, number_of_bins]
-    r, g, b = cv2.split(quantizied_image)
-    r_hist, _ = np.histogram(r.flatten(), hist_size, hist_range)
-    g_hist, _ = np.histogram(g.flatten(), hist_size, hist_range)
-    b_hist, _ = np.histogram(b.flatten(), hist_size, hist_range)
-    histogram = np.vstack((r_hist, g_hist, b_hist))
+    quantized_image = np.uint8(np.floor(np.divide(image, number_of_bins)))
+    histogram = calc_histogram(quantized_image, number_of_bins)
     return histogram
 
 
@@ -141,8 +139,11 @@ def sample_particles(previous_state: np.ndarray, cdf: np.ndarray) -> np.ndarray:
     # create initial state
     s_init = np.array([297, 139, 16, 43, 0, 0])
 
-    S_next = np.zeros(previous_state.shape)
-
+    S_next = np.zeros((6, N))
+    for particle_idx in range(N):
+        r = np.random.uniform(0, 1)
+        j = np.argmax(cdf >= r)
+        S_next[:, particle_idx] = previous_state[:, j]
     return S_next
 
 
@@ -156,8 +157,12 @@ def bhattacharyya_distance(p: np.ndarray, q: np.ndarray) -> float:
     Return:
         distance: float. The Bhattacharyya Distance.
     """
-    BC = np.sum(np.sqrt(p * q))
-    distance = np.float(-np.log(BC))
+
+    # BC = np.sum(np.sqrt(p * q))
+    # distance = np.float(-np.log(BC))
+
+    distance = np.exp(20 * np.sum(np.sqrt(p * q)))
+
     return distance
 
 
@@ -192,6 +197,30 @@ def show_particles(image: np.ndarray, state: np.ndarray, W: np.ndarray, frame_in
     return frame_index_to_mean_state, frame_index_to_max_state
 
 
+def compute_weights(q: np.ndarray, image: np.ndarray, S: np.ndarray) -> np.ndarray:
+    W = np.zeros((1, N))
+    for particle_idx in range(N):
+        current_p = compute_normalized_histogram(image, S[:, particle_idx])
+        W[0, particle_idx] = bhattacharyya_distance(current_p, q)
+    W /= np.sum(W)
+    return W
+
+
+def compute_CDF(W: np.ndarray) -> np.ndarray:
+    C = np.zeros((1, N))
+    C[0, 0] = W[0, 0]
+    for particle_idx in range(1, N - 1):
+        C[0, particle_idx] = W[0, 0:particle_idx + 1].sum()
+    C[0, N - 1] = 1
+    return C
+
+
+def calculate_weights_and_CDF(q: np.ndarray, image: np.ndarray, S: np.ndarray) -> (np.ndarray, np.ndarray):
+    W = compute_weights(q, image, S)
+    C = compute_CDF(W)
+    return W, C
+
+
 def main():
     state_at_first_frame = np.matlib.repmat(s_initial, N, 1).T
     S = predict_particles(state_at_first_frame)
@@ -204,7 +233,10 @@ def main():
 
     # COMPUTE NORMALIZED WEIGHTS (W) AND PREDICTOR CDFS (C)
     # YOU NEED TO FILL THIS PART WITH CODE:
-    """INSERT YOUR CODE HERE."""
+    W, C = calculate_weights_and_CDF(q, image, S)
+
+    # COMPUTE S_next, the next filter state
+    s_next = sample_particles(S, C)
 
     images_processed = 1
 
@@ -229,7 +261,7 @@ def main():
 
         # COMPUTE NORMALIZED WEIGHTS (W) AND PREDICTOR CDFS (C)
         # YOU NEED TO FILL THIS PART WITH CODE:
-        """INSERT YOUR CODE HERE."""
+        W, C = calculate_weights_and_CDF(q, image, S)
 
         # CREATE DETECTOR PLOTS
         images_processed += 1
