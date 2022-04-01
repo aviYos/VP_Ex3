@@ -25,6 +25,10 @@ sigma_pos_y = 1
 sigma_vel_x = 1
 sigma_vel_y = 1
 
+# number of histogram bits
+
+NUMBER_OF_HISTOGRAM_BITS = 4
+
 # Initial Settings
 s_initial = [297,  # x center
              139,  # y center
@@ -78,6 +82,27 @@ def slice_image(image: np.ndarray, state: np.ndarray) -> np.ndarray:
     return image[y_center - half_height: y_center + half_height, x_center - half_width: x_center + half_width]
 
 
+def create_slice_mask(image: np.ndarray, state: np.ndarray) -> np.ndarray:
+    x_center, y_center, half_width, half_height, _, _ = state
+    mask = np.zeros(image.shape[:2], np.uint8)
+    mask[y_center - half_height: y_center + half_height, x_center - half_width: x_center + half_width] = 255
+    masked_img = cv2.bitwise_and(image, image, mask=mask)
+    return masked_img
+
+
+def create_quantizied_histogram(image: np.ndarray) -> np.ndarray:
+    number_of_bins = int(np.power(2, NUMBER_OF_HISTOGRAM_BITS))
+    quantizied_image = np.uint8(np.floor(np.divide(image, number_of_bins)))
+    hist_size = number_of_bins
+    hist_range = [0, number_of_bins]
+    r, g, b = cv2.split(quantizied_image)
+    r_hist, _ = np.histogram(r.flatten(), hist_size, hist_range)
+    g_hist, _ = np.histogram(g.flatten(), hist_size, hist_range)
+    b_hist, _ = np.histogram(b.flatten(), hist_size, hist_range)
+    histogram = np.vstack((r_hist, g_hist, b_hist))
+    return histogram
+
+
 def compute_normalized_histogram(image: np.ndarray, state: np.ndarray) -> np.ndarray:
     """Compute the normalized histogram using the state parameters.
 
@@ -90,9 +115,8 @@ def compute_normalized_histogram(image: np.ndarray, state: np.ndarray) -> np.nda
     """
     state = np.floor(state)
     state = state.astype(int)
-    hist = np.zeros(1, 16 * 16 * 16)
-    """ DELETE THE LINE ABOVE AND:
-        INSERT YOUR CODE HERE."""
+    sliced_image = slice_image(image, state)
+    hist = create_quantizied_histogram(sliced_image)
     hist = np.reshape(hist, 16 * 16 * 16)
 
     # normalize
@@ -132,9 +156,8 @@ def bhattacharyya_distance(p: np.ndarray, q: np.ndarray) -> float:
     Return:
         distance: float. The Bhattacharyya Distance.
     """
-    distance = 0
-    """ DELETE THE LINE ABOVE AND:
-        INSERT YOUR CODE HERE."""
+    BC = np.sum(np.sqrt(p * q))
+    distance = np.float(-np.log(BC))
     return distance
 
 
