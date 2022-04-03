@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 # change IDs to your IDs.
-ID1 = "123456789"
-ID2 = "987654321"
+ID1 = "315488171"
+ID2 = "314756297"
 
 ID = "HW3_{0}_{1}".format(ID1, ID2)
 RESULTS = 'results'
@@ -175,17 +175,24 @@ def show_particles(image: np.ndarray, state: np.ndarray, W: np.ndarray, frame_in
     plt.title(ID + " - Frame mumber = " + str(frame_index))
 
     # Avg particle box
-    (x_avg, y_avg, w_avg, h_avg) = (0, 0, 0, 0)
-    """ DELETE THE LINE ABOVE AND:
-        INSERT YOUR CODE HERE."""
+    avg_W = np.average(W)
+    avg_index = (np.abs(W-avg_W)).argmin()
+    (x_avg, y_avg, w_avg, h_avg) = state[:4, avg_index]
+    x_avg -= w_avg
+    y_avg -= h_avg
+    w_avg *= 2
+    h_avg *= 2
 
     rect = patches.Rectangle((x_avg, y_avg), w_avg, h_avg, linewidth=1, edgecolor='g', facecolor='none')
     ax.add_patch(rect)
 
     # calculate Max particle box
-    (x_max, y_max, w_max, h_max) = (0, 0, 0, 0)
-    """ DELETE THE LINE ABOVE AND:
-        INSERT YOUR CODE HERE."""
+    max_index = np.argmax(W)
+    (x_max, y_max, w_max, h_max) = state[:4, max_index]
+    x_max -= w_max
+    y_max -= h_max
+    w_max *= 2
+    h_max *= 2
 
     rect = patches.Rectangle((x_max, y_max), w_max, h_max, linewidth=1, edgecolor='r', facecolor='none')
     ax.add_patch(rect)
