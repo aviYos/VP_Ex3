@@ -19,11 +19,12 @@ IMAGE_DIR_PATH = "Images"
 N = 100
 
 # set random noise parameters
-mu = 0
-sigma_pos_x = 1
-sigma_pos_y = 1
-sigma_vel_x = 1
-sigma_vel_y = 1
+mu_x = 0.3
+mu_y = 0.02
+sigma_pos_x = 2.8
+sigma_pos_y = 1.05
+sigma_vel_x = 2.2
+sigma_vel_y = 1.1
 
 # number of histogram bits
 
@@ -41,10 +42,10 @@ s_initial = [297,  # x center
 def add_noise(state: np.ndarray) -> np.ndarray:
     """ Add normal random noise to our state
     """
-    state[0, :] = state[0, :] + np.round(np.random.normal(mu, sigma_pos_x, size=(1, N)))
-    state[1, :] = state[1, :] + np.round(np.random.normal(mu, sigma_pos_y, size=(1, N)))
-    state[4, :] = state[4, :] + np.round(np.random.normal(mu, sigma_vel_x, size=(1, N)))
-    state[5, :] = state[5, :] + np.round(np.random.normal(mu, sigma_vel_y, size=(1, N)))
+    state[0, :] = state[0, :] + np.round(np.random.gamma(mu_x, sigma_pos_x, size=(1, N)))
+    state[1, :] = state[1, :] + np.round(np.random.gamma(mu_y, sigma_pos_y, size=(1, N)))
+    state[4, :] = state[4, :] + np.round(np.random.gamma(mu_x, sigma_vel_x, size=(1, N)))
+    state[5, :] = state[5, :] + np.round(np.random.gamma(mu_y, sigma_vel_y, size=(1, N)))
     return state
 
 
