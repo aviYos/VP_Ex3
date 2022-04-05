@@ -20,10 +20,10 @@ N = 100
 
 # set random noise parameters
 mu = 0
-sigma_pos_x = 5
-sigma_pos_y = 5
-sigma_vel_x = 2
-sigma_vel_y = 2
+sigma_pos_x = 2
+sigma_pos_y = 2
+sigma_vel_x = 0.8
+sigma_vel_y = 0.8
 
 # number of histogram bits
 
@@ -41,10 +41,10 @@ s_initial = [297,  # x center
 def add_noise(state: np.ndarray) -> np.ndarray:
     """ Add normal random noise to our state
     """
-    state[0, :] = state[0, :] + (np.random.normal(mu, sigma_pos_x, size=(1, N)))
-    state[1, :] = state[1, :] + (np.random.normal(mu, sigma_pos_y, size=(1, N)))
-    state[4, :] = state[4, :] + (np.random.normal(mu, sigma_vel_x, size=(1, N)))
-    state[5, :] = state[5, :] + (np.random.normal(mu, sigma_vel_y, size=(1, N)))
+    state[0, :] = state[0, :] + np.round(np.random.normal(mu, sigma_pos_x, size=(1, N)))
+    state[1, :] = state[1, :] + np.round(np.random.normal(mu, sigma_pos_y, size=(1, N)))
+    state[4, :] = state[4, :] + np.round(np.random.normal(mu, sigma_vel_x, size=(1, N)))
+    state[5, :] = state[5, :] + np.round(np.random.normal(mu, sigma_vel_y, size=(1, N)))
     return state
 
 
@@ -140,8 +140,8 @@ def sample_particles(previous_state: np.ndarray, cdf: np.ndarray) -> np.ndarray:
     s_init = np.array([297, 139, 16, 43, 0, 0])
 
     S_next = np.zeros((6, N))
-    S_next[:,0] = s_init
-    for particle_idx in range(1,N):
+    S_next[:, 0] = s_init
+    for particle_idx in range(1, N):
         r = np.random.uniform(0, 1)
         j = np.argmax(cdf >= r)
         S_next[:, particle_idx] = previous_state[:, j]
@@ -177,7 +177,7 @@ def show_particles(image: np.ndarray, state: np.ndarray, W: np.ndarray, frame_in
 
     # Avg particle box
     avg_W = np.average(W)
-    avg_index = (np.abs(W-avg_W)).argmin()
+    avg_index = (np.abs(W - avg_W)).argmin()
     (x_avg, y_avg, w_avg, h_avg) = state[:4, avg_index]
     x_avg -= w_avg
     y_avg -= h_avg
@@ -269,7 +269,7 @@ def main():
 
         # COMPUTE NORMALIZED WEIGHTS (W) AND PREDICTOR CDFS (C)
         # YOU NEED TO FILL THIS PART WITH CODE:
-        W, C = calculate_weights_and_CDF(q, image, S)
+        W, C = calculate_weights_and_CDF(q, current_image, S)
 
         # CREATE DETECTOR PLOTS
         images_processed += 1
